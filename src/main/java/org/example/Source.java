@@ -17,14 +17,14 @@ public class Source extends JPanel implements ActionListener, ListSelectionListe
     JButton buttonAddNote = new JButton("Add/Update");
     JButton buttonRemoveNote = new JButton("Remove");
     JButton buttonClean = new JButton("Clean");
-    DefaultListModel listModel = new DefaultListModel();
-    JList<String> listNotes = new JList(listModel);
+    DefaultListModel<String> listModel = new DefaultListModel<>();
+    JList<String> listNotes = new JList<>(listModel);
     JScrollPane listNotesScroll = new JScrollPane(listNotes);
     JTextArea textAreaNote = new JTextArea();
     JScrollPane textAreaScroll = new JScrollPane(textAreaNote);
 
     public Source() {
-        Database.executeCommand(Database.FIRST_TABLE);
+        Database.initiateDatabase();
         applyListModel();
 
         this.setLayout(new BorderLayout());
@@ -58,26 +58,14 @@ public class Source extends JPanel implements ActionListener, ListSelectionListe
     @Override
     public void actionPerformed(ActionEvent e) {
         if(e.getSource() == buttonAddNote && !fieldNoteTitle.getText().isBlank()){
-            if(Database.rowIndex > 0) {
-                Database.executeCommand("UPDATE " + Database.TABLE_NAME + " SET " +
-                        Database.COLUMN_TITLE + "='" + fieldNoteTitle.getText() + "', " +
-                        Database.COLUMN_CONTENT + "='" + textAreaNote.getText() + "' " +
-                        "WHERE " + Database.COLUMN_ID + "=" + Database.rowIndex + ";");
-            } else{
-                Database.executeCommand("INSERT INTO " + Database.TABLE_NAME + "(" +
-                        Database.COLUMN_TITLE + ", " + Database.COLUMN_CONTENT + ") VALUES(" +
-                        "'" + fieldNoteTitle.getText() + "', '" + textAreaNote.getText() + "');");
-            }
+            Database.addNote(fieldNoteTitle.getText(), textAreaNote.getText());
             applyListModel();
         }
 
         if(e.getSource() == buttonRemoveNote){
-            if(Database.rowIndex > 0) {
-                Database.executeCommand("DELETE FROM " + Database.TABLE_NAME +
-                        " WHERE " + Database.COLUMN_ID + "=" + Database.rowIndex + ";");
-                cleanAll();
-            }
+            Database.removeNote();
             applyListModel();
+            cleanAll();
         }
 
         if(e.getSource() == buttonClean){
@@ -88,26 +76,27 @@ public class Source extends JPanel implements ActionListener, ListSelectionListe
 
     @Override
     public void valueChanged(ListSelectionEvent e) {
-        if (e.getValueIsAdjusting() == true) {
+        if (e.getValueIsAdjusting()) {
             String selectedRow = listNotes.getSelectedValue();
-            Database.rowIndex = Integer.parseInt(selectedRow.substring(0, selectedRow.indexOf(":")));
-            fieldNoteTitle.setText(selectedRow.substring(selectedRow.indexOf(":")+2));
-            textAreaNote.setText(Database.getNoteContent(Database.rowIndex));
+            int rowIndex = Integer.parseInt(selectedRow.substring(0, selectedRow.indexOf(":")));
+            Database.setRowIndex(rowIndex);
+            fieldNoteTitle.setText(selectedRow.substring(selectedRow.indexOf(":") + 2));
+            textAreaNote.setText(Database.getNoteContent(rowIndex));
         }
     }
 
-    public void applyListModel(){
+    private void applyListModel(){
         listModel.clear();
-        for(String element : Database.getNotesList()){
+        for(String element : Database.getNoteList()){
             listModel.addElement(element);
         }
     }
 
-    public void cleanAll(){
+    private void cleanAll(){
         fieldNoteTitle.setText(null);
         textAreaNote.setText(null);
         listNotes.clearSelection();
-        Database.rowIndex = (-1);
+        Database.setRowIndex(-1);
     }
 
 }
